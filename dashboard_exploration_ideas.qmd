@@ -1,0 +1,132 @@
+---
+title: "dashboard ideas/exploration"
+format: html
+editor_options: 
+  chunk_output_type: console
+---
+
+# load libraries
+```{r}
+library(tidyverse)
+library(here)
+library(sf)
+library(tmap)
+library(stars)
+library(terra)
+```
+
+# read in data
+```{r}
+historical <- read_csv(here("data", "historical_production_delivery.csv"))
+metadata <- read_csv(here("data", "metadata.csv"))
+dictionary <- read_csv(here("metadata", "historical_production_delivery_data_dictionary.csv"))
+actual_shortage <- read_csv(here("data", "actual_water_shortage_level.csv"))
+fiveyr_shortage <- read_csv(here("data", "five_year_water_shortage_outlook.csv"))
+monthly_shortage <- read_csv(here("data", "monthly_water_shortage_outlook.csv"))
+```
+
+```{r}
+boundary <- read_sf(here("data", "supplier_shape", "California_Drinking_Water_System_Area_Boundaries.shp"))
+```
+
+```{r}
+tm_shape(boundary) + 
+  tm_polygons()
+```
+
+## Historical dataset:
+
+```{r}
+historical_nona <- historical |> 
+  filter(quantity_acre_feet >= 0) |> 
+  filter(water_produced_or_delivered == "water produced")
+
+historical_small = historical_nona |> 
+  filter(pwsid == "CA3610001")
+
+historical_small2 = historical_nona |> 
+  filter(pwsid == "CA2710001")
+```
+
+```{r}
+ggplot(historical_small, aes(x = start_date, y = quantity_acre_feet, color = pwsid)) +
+  geom_line()
+```
+
+```{r}
+ggplot(historical_small2, aes(x = start_date, y = quantity_acre_feet, color = pwsid)) +
+  geom_line()
+```
+
+```{r}
+
+historical_compare_del <- historical |> 
+  filter(quantity_acre_feet >= 0) |> 
+  filter(water_produced_or_delivered == "water delivered") |> 
+  rename(delivery_quantity = quantity_acre_feet) |> 
+  select(water_system_name, delivery_quantity, pwsid, start_date)
+
+historical_compare_prod <- historical |> 
+  filter(quantity_acre_feet >= 0) |> 
+  filter(water_produced_or_delivered == "water produced") |> 
+  rename(production_quantity = quantity_acre_feet) |> 
+  select(-water_produced_or_delivered) 
+
+
+historical_small2 = historical_compare_del |> 
+  filter(pwsid == "CA3610001")
+
+historical_small3 = historical_compare_prod |> 
+  filter(pwsid == "CA2710001")
+
+```
+
+
+```{r}
+ggplot(historical_small2, aes(x = start_date, y = delivery_quantity)) +
+  geom_line()
+
+ggplot(historical_small3, aes(x = start_date, y = production_quantity)) +
+  geom_line()
+
+
+```
+
+possible variables of interest:
+
+we might want to visualize date (start_date?) with production or delivery quantity
+
+for example: in the dashboard, if we select a specific pwsid, we could show the graph of production quantity over time. 
+
+Maybe also be able to select water type and visualize average production/delivery over time
+
+example of what the dashboard graph could look like:
+```{r}
+ggplot(historical_small3, aes(x = start_date, y = production_quantity)) +
+  geom_line(color = "navy") +
+  labs(
+    title = "City of Adelanto Water System's Historical Production ",
+    x = "Date (2013-2022)",
+    y = "Production Amount (acre-feet)"
+  ) +
+  theme_bw()+
+  scale_x_date(expand = c(0, NA)
+  ) +
+  scale_y_continuous(expand = c(0, NA))
+```
+
+## Actual shortage dataset
+
+```{r}
+# join with historical?
+
+actual_shortage_2022 <- actual_shortage |> 
+  mutate(year = year(start_date)) |> 
+  filter(year == 2022) 
+
+ggplot(actual_shortage_2022, aes(x = start_date, y = state_standard_shortage_level)) +
+  geom_col()
+
+```
+
+
